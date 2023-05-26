@@ -56,8 +56,9 @@ def train(model, iterator, optimizer, criterion, clip):
     model.train()
     epoch_loss = 0
     for i, batch in enumerate(iterator):
-        src = batch.src
-        trg = batch.trg
+        src = batch[0]
+        trg = batch[2]
+        print(src.size(),batch[1].size(),trg.size())
 
         optimizer.zero_grad()
         output = model(src, trg[:, :-1])
@@ -66,7 +67,8 @@ def train(model, iterator, optimizer, criterion, clip):
 
         loss = criterion(output_reshape, trg)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+        torch.nn.utils.clip_grad.clip_grad_norm_(model.parameters(), clip)
         optimizer.step()
 
         epoch_loss += loss.item()
@@ -81,8 +83,8 @@ def evaluate(model, iterator, criterion):
     batch_bleu = []
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            src = batch.src
-            trg = batch.trg
+            src = batch[0]
+            trg = batch[2]
             output = model(src, trg[:, :-1])
             output_reshape = output.contiguous().view(-1, output.shape[-1])
             trg = trg[:, 1:].contiguous().view(-1)
@@ -93,9 +95,9 @@ def evaluate(model, iterator, criterion):
             total_bleu = []
             for j in range(batch_size):
                 try:
-                    trg_words = idx_to_word(batch.trg[j], loader.target.vocab)
+                    trg_words = idx_to_word(batch.trg[j], loader.target_vocab) # TODO:
                     output_words = output[j].max(dim=1)[1]
-                    output_words = idx_to_word(output_words, loader.target.vocab)
+                    output_words = idx_to_word(output_words, loader.target_vocab) # TODO:
                     bleu = get_bleu(hypotheses=output_words.split(), reference=trg_words.split())
                     total_bleu.append(bleu)
                 except:
@@ -107,13 +109,12 @@ def evaluate(model, iterator, criterion):
     batch_bleu = sum(batch_bleu) / len(batch_bleu)
     return epoch_loss / len(iterator), batch_bleu
 
-
 def run(total_epoch, best_loss):
     train_losses, test_losses, bleus = [], [], []
     for step in range(total_epoch):
         start_time = time.time()
-        train_loss = train(model, train_iter, optimizer, criterion, clip)
-        valid_loss, bleu = evaluate(model, valid_iter, criterion)
+        train_loss = train(model, loader.train_dataloader, optimizer, criterion, clip)
+        valid_loss, bleu = evaluate(model, loader.val_dataloader, criterion)
         end_time = time.time()
 
         if step > warmup:

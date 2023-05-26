@@ -1,3 +1,11 @@
+### Using `poetry`
+
+```bash:
+% poetry install
+% poetry run python -m spacy download de_core_news_sm
+% poetry run python -m spacy download en_core_web_sm
+```
+
 ### WARNING
 This code was written in 2019, and I was not very familiar with transformer model in that time.
 So don't trust this code too much. Currently I am not managing this code well, so please open pull requests if you find bugs in the code and want to fix.
@@ -13,8 +21,8 @@ My own implementation Transformer model (Attention is All You Need - Google Brai
 ### 1.1 Positional Encoding
 
 ![model](image/positional_encoding.jpg)
-   
-    
+
+
 ```python
 class PositionalEncoding(nn.Module):
     """
@@ -55,7 +63,7 @@ class PositionalEncoding(nn.Module):
 
         return self.encoding[:seq_len, :]
         # [seq_len = 30, d_model = 512]
-        # it will add with tok_emb : [128, 30, 512]         
+        # it will add with tok_emb : [128, 30, 512]
 ```
 <br><br>
 
@@ -85,7 +93,7 @@ class MultiHeadAttention(nn.Module):
 
         # 3. do scale dot product to compute similarity
         out, attention = self.attention(q, k, v, mask=mask)
-        
+
         # 4. concat and pass to linear layer
         out = self.concat(out)
         out = self.w_concat(out)
@@ -169,7 +177,7 @@ class ScaleDotProductAttention(nn.Module):
 ### 1.4 Layer Norm
 
 ![model](image/layer_norm.jpg)
-    
+
 ```python
 class LayerNorm(nn.Module):
     def __init__(self, d_model, eps=1e-12):
@@ -181,7 +189,7 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         mean = x.mean(-1, keepdim=True)
         var = x.var(-1, unbiased=False, keepdim=True)
-        # '-1' means last dimension. 
+        # '-1' means last dimension.
 
         out = (x - mean) / torch.sqrt(var + self.eps)
         out = self.gamma * out + self.beta
@@ -193,7 +201,7 @@ class LayerNorm(nn.Module):
 ### 1.5 Positionwise Feed Forward
 
 ![model](image/positionwise_feed_forward.jpg)
-    
+
 ```python
 
 class PositionwiseFeedForward(nn.Module):
@@ -217,7 +225,7 @@ class PositionwiseFeedForward(nn.Module):
 ### 1.6 Encoder & Decoder Structure
 
 ![model](image/enc_dec.jpg)
-    
+
 ```python
 class EncoderLayer(nn.Module):
 
@@ -235,15 +243,15 @@ class EncoderLayer(nn.Module):
         # 1. compute self attention
         _x = x
         x = self.attention(q=x, k=x, v=x, mask=src_mask)
-        
+
         # 2. add and norm
         x = self.dropout1(x)
         x = self.norm1(x + _x)
-        
+
         # 3. positionwise feed forward network
         _x = x
         x = self.ffn(x)
-      
+
         # 4. add and norm
         x = self.dropout2(x)
         x = self.norm2(x + _x)
@@ -295,11 +303,11 @@ class DecoderLayer(nn.Module):
         self.norm3 = LayerNorm(d_model=d_model)
         self.dropout3 = nn.Dropout(p=drop_prob)
 
-    def forward(self, dec, enc, trg_mask, src_mask):    
+    def forward(self, dec, enc, trg_mask, src_mask):
         # 1. compute self attention
         _x = dec
         x = self.self_attention(q=dec, k=dec, v=dec, mask=trg_mask)
-        
+
         # 2. add and norm
         x = self.dropout1(x)
         x = self.norm1(x + _x)
@@ -308,7 +316,7 @@ class DecoderLayer(nn.Module):
             # 3. compute encoder - decoder attention
             _x = x
             x = self.enc_dec_attention(q=x, k=enc, v=enc, mask=src_mask)
-            
+
             # 4. add and norm
             x = self.dropout2(x)
             x = self.norm2(x + _x)
@@ -316,7 +324,7 @@ class DecoderLayer(nn.Module):
         # 5. positionwise feed forward network
         _x = x
         x = self.ffn(x)
-        
+
         # 6. add and norm
         x = self.dropout3(x)
         x = self.norm3(x + _x)
@@ -324,7 +332,7 @@ class DecoderLayer(nn.Module):
 ```
 <br>
 
-```python        
+```python
 class Decoder(nn.Module):
     def __init__(self, dec_voc_size, max_len, d_model, ffn_hidden, n_head, n_layers, drop_prob, device):
         super().__init__()
@@ -390,7 +398,7 @@ I follow original paper's parameter settings. (below) <br>
 
 ![image](saved/transformer-base/train_result.jpg)
 * Minimum Training Loss = 2.852672759656864
-* Minimum Validation Loss = 3.2048025131225586 
+* Minimum Validation Loss = 3.2048025131225586
 <br><br>
 
 | Model | Dataset | BLEU Score |
@@ -410,13 +418,13 @@ I follow original paper's parameter settings. (below) <br>
 
 ## 4. Licence
     Copyright 2019 Hyunwoong Ko.
-    
+
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
-    
+
     http://www.apache.org/licenses/LICENSE-2.0
-    
+
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
